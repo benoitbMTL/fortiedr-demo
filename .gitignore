@@ -1,0 +1,14 @@
+# Exclude environment files containing sensitive information
+.env
+
+# Exclude automatically generated files
+*.pyc
+__pycache__/
+*.log
+
+# Exclude temporary system files
+.DS_Store
+Thumbs.db
+
+# Exclude virtual environment files
+venv/
