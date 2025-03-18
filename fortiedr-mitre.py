@@ -3,7 +3,7 @@ import subprocess
 import curses
 
 # Define MITRE ATT&CK tests
-tests = [
+TESTS = [
     {
         "id": "T1027.007",
         "title": "Obfuscated Files or Information: Dynamic API Resolution",
