@@ -1,9 +1,8 @@
 import os
 import subprocess
 import curses
-import textwrap
 
-# Define Atomic Red Team tests in JSON format
+# Define MITRE ATT&CK tests
 tests = [
     {
         "id": "T1027.007",
@@ -118,75 +117,61 @@ tests = [
     }
 ]
 
-def clear_screen():
-    """Clears the console screen"""
-    os.system("cls" if os.name == "nt" else "clear")
-
 def display_menu(stdscr):
-    """Displays the interactive menu"""
     curses.curs_set(0)
     stdscr.keypad(True)
     curses.start_color()
-    curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)   # Titles / Success messages
-    curses.init_pair(2, curses.COLOR_YELLOW, curses.COLOR_BLACK)  # Descriptions / Warnings
-    curses.init_pair(3, curses.COLOR_GREEN, curses.COLOR_BLACK)   # Commands / Execution text
+    curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)   # Normal text
+    curses.init_pair(2, curses.COLOR_YELLOW, curses.COLOR_BLACK)  # Highlighted selection
+    
     selected_index = 0
-
     while True:
         stdscr.clear()
-        stdscr.addstr(1, 2, "FortiEDR Demo - MITRE ATT&CK", curses.color_pair(1) | curses.A_BOLD)
-        stdscr.addstr(2, 2, "Use UP/DOWN to navigate, ENTER to select, Q to quit.", curses.color_pair(3))
-
-        for idx, test in enumerate(tests):
+        stdscr.addstr(1, 2, "MITRE ATT&CK Test Menu", curses.color_pair(1) | curses.A_BOLD)
+        stdscr.addstr(2, 2, "Use UP/DOWN to navigate, ENTER to select, BACKSPACE to exit.", curses.color_pair(1))
+        
+        for idx, test in enumerate(TESTS):
             if idx == selected_index:
                 stdscr.attron(curses.color_pair(2) | curses.A_REVERSE)
-                stdscr.addstr(4 + idx, 2, f"{test['id']}\t{test['title']}")
+            stdscr.addstr(4 + idx, 2, f"{test['id']}\t{test['title']}")
+            if idx == selected_index:
                 stdscr.attroff(curses.color_pair(2) | curses.A_REVERSE)
-            else:
-                stdscr.addstr(4 + idx, 2, f"{test['id']}\t{test['title']}", curses.color_pair(2))
-
-        stdscr.addstr(6 + len(tests), 2, "[Q] Quit", curses.color_pair(3))
-
+        
         key = stdscr.getch()
         if key == curses.KEY_UP:
-            selected_index = (selected_index - 1) % len(tests)
+            selected_index = (selected_index - 1) % len(TESTS)
         elif key == curses.KEY_DOWN:
-            selected_index = (selected_index + 1) % len(tests)
+            selected_index = (selected_index + 1) % len(TESTS)
         elif key == 10:  # ENTER
-            display_test_details(stdscr, tests[selected_index])
-        elif key in (ord('q'), ord('Q')):
+            display_test_details(stdscr, TESTS[selected_index])
+        elif key == 8 or key == 127:  # BACKSPACE
             break
 
 def display_test_details(stdscr, test):
-    """Displays details of the selected test using curses"""
     stdscr.clear()
-    stdscr.addstr(1, 2, f"{test['id']}\t{test['title']}", curses.color_pair(3))  # Green for title
-    stdscr.addstr(3, 2, test['test'], curses.color_pair(1))  # White for test name
-    stdscr.addstr(5, 2, "Triggered Rules:", curses.color_pair(3))  # Green for rules
-    for rule in test["rules"]:
-        stdscr.addstr(6 + test["rules"].index(rule), 4, rule)  # Indented for readability
-    stdscr.addstr(8 + len(test["rules"]), 2, "Command:", curses.color_pair(3))  # Green for command
-    stdscr.addstr(9 + len(test["rules"]), 4, test['command'])
-    stdscr.addstr(11 + len(test["rules"]), 2, "Press ENTER to execute or BACKSPACE to return.", curses.color_pair(3))  # Green for instructions
-
+    curses.init_pair(3, curses.COLOR_GREEN, curses.COLOR_BLACK)  # Green text
+    curses.init_pair(4, curses.COLOR_WHITE, curses.COLOR_BLACK)  # White text
+    
+    stdscr.addstr(2, 2, f"{test['id']}\t{test['title']}", curses.color_pair(3) | curses.A_BOLD)
+    stdscr.addstr(4, 2, test['test'], curses.color_pair(4))
+    stdscr.addstr(6, 2, "Press ENTER to execute or BACKSPACE to return.", curses.color_pair(1))
+    
     while True:
         key = stdscr.getch()
         if key == 10:  # ENTER
-            curses.endwin()  # Exit curses mode
-            run_test(test["command"])  # Run test
-            curses.wrapper(display_menu)  # Restart curses after returning
+            run_test(stdscr, test['command'])
             break
-        elif key in (curses.KEY_BACKSPACE, 127):  # Handle BACKSPACE properly
-            display_menu(stdscr)
-            break
+        elif key == 8 or key == 127:  # BACKSPACE
+            return
 
-def run_test(command):
-    """Executes the selected Atomic Red Team test and returns to menu automatically"""
-    clear_screen()
+def run_test(stdscr, command):
+    stdscr.clear()
+    stdscr.addstr(2, 2, "Executing test...", curses.color_pair(1))
+    stdscr.refresh()
     os.system(f'powershell -ExecutionPolicy Bypass -NoProfile -Command "{command}"')
+    display_menu(stdscr)  # Return to menu after execution
 
 def main():
-    """Runs the interactive menu inside curses wrapper"""
     curses.wrapper(display_menu)
 
 if __name__ == "__main__":
