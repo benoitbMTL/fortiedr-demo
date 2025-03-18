@@ -1,3 +1,3 @@
 @echo off
-python.exe .\malware_downloader.py
+python.exe .\fortiedr-mitre.py
 pause
